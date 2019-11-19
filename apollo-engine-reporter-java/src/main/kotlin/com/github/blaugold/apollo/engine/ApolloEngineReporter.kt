@@ -103,7 +103,7 @@ class ApolloEngineReporter(
      *
      * @throws IllegalStateException if this reporter has already been stopped.
      */
-    fun stop(timeout: Duration = Duration.ofSeconds(5)) {
+    fun stop(timeout: Duration) {
         synchronized(this) {
             check(started) { "Reporter has not been started yet." }
             check(!stopped) { "Reporter has already been stopped." }
@@ -122,6 +122,11 @@ class ApolloEngineReporter(
             executor.shutdownNow()
         }
     }
+
+    /**
+     * Same as [stop] with timout but with fixed timeout of 5 seconds.
+     */
+    fun stop() = stop(Duration.ofSeconds(5))
 
     override fun reportTrace(traceContext: TraceContext) {
         synchronized(this) {

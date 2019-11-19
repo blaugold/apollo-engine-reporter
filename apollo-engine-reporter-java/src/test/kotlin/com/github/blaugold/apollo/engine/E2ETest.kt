@@ -1,7 +1,6 @@
 package com.github.blaugold.apollo.engine
 
 import graphql.GraphQL
-import graphql.execution.AsyncExecutionStrategy
 import graphql.execution.instrumentation.ChainedInstrumentation
 import graphql.execution.instrumentation.tracing.TracingInstrumentation
 import graphql.schema.StaticDataFetcher
@@ -51,7 +50,6 @@ class E2ETest {
 
         val execution = GraphQL.newGraphQL(graphQLSchema)
                 .instrumentation(instrumentation)
-                .queryExecutionStrategy(AsyncExecutionStrategy())
                 .build()
 
         val result = execution.execute("query { hello error }")

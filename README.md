@@ -14,3 +14,11 @@ TODO
 ### License
 
 apollo-engine-reporter-java is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
+
+### TODO
+
+- CacheControl
+- Http
+- Variables
+- Retry Request to Apollo Engine
+- Java API

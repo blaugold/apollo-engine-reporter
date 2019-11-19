@@ -72,6 +72,7 @@ publishing {
                 password = project.findProperty("github.password") as String?
             }
         }
+        mavenLocal()
     }
 
     publications {
