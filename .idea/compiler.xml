@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="apollo-engine-reporter.apollo-engine-reporter.main" target="11" />
+      <module name="apollo-engine-reporter.apollo-engine-reporter.test" target="11" />
+      <module name="java-apollo-engine-reporter.java-apollo-engine-reporter.main" target="11" />
+      <module name="java-apollo-engine-reporter.java-apollo-engine-reporter.test" target="11" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
