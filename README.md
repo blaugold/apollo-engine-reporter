@@ -20,5 +20,4 @@ apollo-engine-reporter-java is licensed under the MIT License. See [LICENSE](./L
 - CacheControl
 - Http
 - Variables
-- Retry Request to Apollo Engine
 - Java API

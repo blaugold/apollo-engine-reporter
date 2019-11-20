@@ -45,16 +45,16 @@ class TraceBuffer(
     }
 
     /**
-     * Flushes at least [bytes] from the buffer but not less. Returns the traces grouped by
+     * Flushes at least [minBytes] from the buffer but not less. Returns the traces grouped by
      * signature.
      *
-     * If no [bytes] to flush are given the complete buffer is emptied.
+     * If no [minBytes] to flush are given the complete buffer is emptied.
      */
-    fun flush(bytes: Long = maxBufferedBytes): Map<String, List<Trace>> = synchronized(this) {
+    fun flush(minBytes: Long = maxBufferedBytes): Map<String, List<Trace>> = synchronized(this) {
         var unbufferedBytes = 0L
         val result = mutableMapOf<String, MutableList<Trace>>()
 
-        while (unbufferedBytes < bytes && traces.isNotEmpty()) {
+        while (unbufferedBytes < minBytes && traces.isNotEmpty()) {
             val entry = dequeEntry()
             unbufferedBytes += entry.trace.serializedSize
             result.computeIfAbsent(entry.signature) { mutableListOf() }.add(entry.trace)

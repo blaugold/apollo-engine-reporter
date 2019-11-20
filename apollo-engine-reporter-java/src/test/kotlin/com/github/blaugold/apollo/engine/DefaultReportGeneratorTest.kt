@@ -83,7 +83,7 @@ internal class DefaultReportGeneratorTest {
             val header = generator.getReportHeader()
 
             // Then
-            assertThat(header.agentVersion).isEqualTo("JavaApolloEngineReporter ${Version.string}")
+            assertThat(header.agentVersion).isEqualTo("ApolloEngineReporterJava ${Version.string}")
         }
 
     }

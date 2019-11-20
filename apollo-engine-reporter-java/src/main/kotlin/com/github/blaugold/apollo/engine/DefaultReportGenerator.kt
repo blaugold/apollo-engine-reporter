@@ -21,7 +21,7 @@ class DefaultReportGenerator(
             .newBuilder()
             .apply {
                 hostname = InetAddress.getLocalHost().hostName
-                agentVersion = "JavaApolloEngineReporter ${Version.string}"
+                agentVersion = "ApolloEngineReporterJava ${Version.string}"
                 uname = System.getProperty("os.name")
                 runtimeVersion = Runtime.version().toString()
 
@@ -40,7 +40,7 @@ class DefaultReportGenerator(
 
         if (clientInfo != null) setClientInfo(clientInfo)
 
-        trace.execution.resolvers.forEach { getNode(it.path).configureNode(it) }
+        trace.execution.resolvers.forEach { getNode(it.path).buildResolverNode(it) }
         errors?.forEach { getNode(it.path).addError(it) }
     }.build()
 
@@ -64,24 +64,6 @@ private fun Trace.Builder.setClientInfo(clientInfo: ClientInfo) {
     clientInfo.referenceId?.also { clientReferenceId = it }
 }
 
-private fun Node.Builder.resolveSegment(segment: Any): Node.Builder = when (segment) {
-
-    // This segments is a list index
-    is Int ->
-        // Find an existing node
-        childBuilderList.find { it.index == segment }
-        // Or create a new one
-                ?: addChildBuilder().apply { index = segment }
-
-    // This segment is a field selection
-    is String -> childBuilderList.find { it.responseName == segment }
-    // Should not happen
-            ?: throw IllegalStateException("Could not resolve segment $segment.")
-
-    else -> throw IllegalStateException("Unexpected type of segment $segment.")
-
-}
-
 fun Trace.Builder.getNode(path: List<Any>): Node.Builder {
     var parent = rootBuilder
     val mPath = path.toMutableList()
@@ -100,8 +82,7 @@ fun Trace.Builder.getNode(path: List<Any>): Node.Builder {
     return parent
 }
 
-
-private fun Node.Builder.configureNode(resolver: ResolverTrace) {
+private fun Node.Builder.buildResolverNode(resolver: ResolverTrace) {
     val fieldSelection = resolver.path.last() as String
 
     if (resolver.fieldName != fieldSelection) {

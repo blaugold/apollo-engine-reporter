@@ -64,7 +64,7 @@ internal class ApolloEngineReporterTest {
                 reportGenerator = DefaultReportGenerator(),
                 // No scheduled flush during test
                 reportInterval = Duration.ofDays(1),
-                flushBufferThreshold = 0
+                flushImmediately = true
         )
 
         reporter.start()
@@ -100,7 +100,7 @@ internal class ApolloEngineReporterTest {
 
         val reports = mutableListOf<GraphqlApolloReporing.FullTracesReport>()
 
-        override fun ship(report: GraphqlApolloReporing.FullTracesReport) {
+        override suspend fun ship(report: GraphqlApolloReporing.FullTracesReport) {
             reports.add(report)
         }
 

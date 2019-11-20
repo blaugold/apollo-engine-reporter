@@ -1,13 +1,14 @@
 package com.github.blaugold.apollo.engine
 
 import graphql.parser.Parser
+import kotlinx.coroutines.*
 import mdg.engine.proto.GraphqlApolloReporing.FullTracesReport
 import org.apache.logging.log4j.LogManager
 import java.time.Duration
-import java.util.concurrent.Executors
+import java.util.Collections.synchronizedSet
+import java.util.concurrent.Executors.newScheduledThreadPool
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -37,9 +38,14 @@ class ApolloEngineReporter(
 
         /**
          * The amount of traces in bytes to collect in the buffer before flushing them in a report.
-         * The default is 4MB. To send every trace immediately set this value to 0.
+         * The default is 4MB.
          */
         private val flushBufferThreshold: Long = 4_000_000,
+
+        /**
+         * Flush buffer every time a trace is reported.
+         */
+        private val flushImmediately: Boolean = false,
 
         /**
          * The interval at which to send reports.
@@ -53,21 +59,27 @@ class ApolloEngineReporter(
 
 ) : TraceReporter {
 
-    private var started = false
+    private var started = AtomicBoolean(false)
 
-    private var stopped = false
+    private var stopped = AtomicBoolean(false)
 
     private val log = LogManager.getLogger(javaClass)
 
     private val parser = Parser()
 
-    private val traceBuffer = TraceBuffer()
+    private val buffer = TraceBuffer()
 
     private val threadId = AtomicInteger()
 
     private lateinit var executor: ScheduledExecutorService
 
-    private lateinit var bufferFlushTask: ScheduledFuture<*>
+    private lateinit var coroutineDispatcher: ExecutorCoroutineDispatcher
+
+    private lateinit var coroutineScope: CoroutineScope
+
+    private lateinit var scheduledFlushJob: Job
+
+    private val activeProcessTraceJobs = synchronizedSet(mutableSetOf<Job>())
 
     /**
      * Starts this reporter. Before this method completes the reporter can not be used.
@@ -75,69 +87,46 @@ class ApolloEngineReporter(
      * @throws IllegalStateException if this reporter has already been started
      */
     fun start() {
-        synchronized(this) {
-            check(!started) { "Reporter has already been started." }
-            started = true
-        }
+        check(started.compareAndSet(false, true)) { "Reporter has already been started." }
 
-        executor = Executors.newScheduledThreadPool(threadPoolSize) {
-            Thread(it).apply {
-                isDaemon = true
-                name = "ApolloEngineReporter-${threadId.getAndIncrement()}"
-            }
-        }
-
-        bufferFlushTask = executor.scheduleAtFixedRate(
-                { flushBuffer() },
-                reportInterval.toMillis(),
-                reportInterval.toMillis(),
-                TimeUnit.MILLISECONDS
-        )
+        executor = createExecutor()
+        coroutineDispatcher = executor.asCoroutineDispatcher()
+        coroutineScope = CoroutineScope(coroutineDispatcher)
+        scheduledFlushJob = startScheduledFlushing()
     }
 
     /**
      * Stops this reporter after flushing existing traces.
      * After this method completes this instance can not be used or restarted.
      *
-     * @param timeout the amount of time to wait for flushing of buffered and in flight traces
-     *
      * @throws IllegalStateException if this reporter has already been stopped.
      */
-    fun stop(timeout: Duration) {
-        synchronized(this) {
-            check(started) { "Reporter has not been started yet." }
-            check(!stopped) { "Reporter has already been stopped." }
+    fun stop() {
+        check(started.get()) { "Reporter has not been started yet." }
+        check(stopped.compareAndSet(false, true)) { "Reporter has already been stopped." }
 
-            stopped = true
+        runBlocking(coroutineDispatcher) {
+            launch { scheduledFlushJob.cancelAndJoin() }
+
+            launch { activeProcessTraceJobs.joinAll() }
+
+            // Make sure all traces in buffer are flushed
+            launch { flush(emptyBuffer = true) }
         }
 
-        bufferFlushTask.cancel(false)
-
-        executor.execute { flushBuffer() }
-
-        executor.shutdown()
-
-        if (!executor.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-            log.error("Executor did not terminate after ${timeout.toMillis()} ms.")
-            executor.shutdownNow()
-        }
+        coroutineDispatcher.close()
     }
-
-    /**
-     * Same as [stop] with timout but with fixed timeout of 5 seconds.
-     */
-    fun stop() = stop(Duration.ofSeconds(5))
 
     override fun reportTrace(traceContext: TraceContext) {
-        synchronized(this) {
-            check(started) { "Reporter has not been started yet." }
-            check(!stopped) { "Reporter has already been stopped." }
-        }
+        check(started.get()) { "Reporter has not been started yet." }
+        check(!stopped.get()) { "Reporter has already been stopped." }
 
-        processTrace(traceContext)
+        val job = coroutineScope.launch { processTrace(traceContext) }
+        activeProcessTraceJobs.add(job)
+        job.invokeOnCompletion { activeProcessTraceJobs.remove(job) }
     }
 
-    private fun processTrace(traceContext: TraceContext) {
+    private suspend fun processTrace(traceContext: TraceContext) {
         val queryDoc = parser.parseDocument(traceContext.query)
         val signature = querySignatureStrategy.computeSignature(queryDoc, traceContext.operation)
         val trace = reportGenerator.getTrace(
@@ -146,31 +135,56 @@ class ApolloEngineReporter(
                 traceContext.errors
         )
 
-        traceBuffer.addTrace(signature, trace)
+        buffer.addTrace(signature, trace)
 
-        checkBuffer()
+        flush(emptyBuffer = flushImmediately)
     }
 
     /**
-     * Checks whether the buffer is at or above [flushBufferThreshold] and flushes it if that is
-     * the case.
+     * Flushes [buffer] in batches of size [flushBufferThreshold]. If buffer is below
+     * [flushBufferThreshold] no traces are flushed unless [emptyBuffer] is `true`.
      */
-    private fun checkBuffer() {
-        if (traceBuffer.bufferedBytes >= flushBufferThreshold) executor.execute { flushBuffer() }
+    private suspend fun flush(emptyBuffer: Boolean = false) {
+        val batches = generateSequence {
+            val traces = buffer.flush(flushBufferThreshold)
+
+            // Buffer was below flushBufferThreshold
+            if (traces.isEmpty()) when {
+
+                // We make sure buffer is empty
+                emptyBuffer -> buffer.flush().let { if (it.isEmpty()) null else it }
+
+                else -> null
+
+            }
+            else traces
+        }
+
+        val batchJobs = batches.map { batch ->
+            log.debug("Shipping ${batch.values.map { it.size }.sum()} traces in next report.")
+
+            coroutineScope.launch {
+                traceShipper.ship(reportGenerator.getReport(reportGenerator.getReportHeader(), batch))
+            }
+        }
+
+        batchJobs.toList().joinAll()
     }
 
-    private fun flushBuffer() {
-        try {
-            while (traceBuffer.isNotEmpty()) {
-                val traces = traceBuffer.flush(flushBufferThreshold.coerceAtLeast(1))
-                if (traces.isEmpty()) return
-
-                log.debug("Shipping ${traces.values.map { it.size }.sum()} traces in next report.")
-
-                traceShipper.ship(reportGenerator.getReport(reportGenerator.getReportHeader(), traces))
+    private fun createExecutor(): ScheduledExecutorService =
+            newScheduledThreadPool(threadPoolSize) {
+                Thread(it).apply {
+                    name = "ApolloEngineReporter-${threadId.getAndIncrement()}"
+                    isDaemon = true
+                    priority = Thread.NORM_PRIORITY
+                }
             }
-        } catch (e: Throwable) {
-            log.error("Failed to flush buffer", e)
+
+    private fun startScheduledFlushing(): Job = coroutineScope.launch {
+        while (isActive) {
+            delay(reportInterval.toMillis())
+            // Do not wait for flushing to complete to keep intervals even
+            launch { flush(emptyBuffer = true) }
         }
     }
 

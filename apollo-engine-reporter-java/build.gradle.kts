@@ -11,6 +11,7 @@ plugins {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
     implementation("com.graphql-java:graphql-java:13.0")
     implementation("com.google.protobuf:protobuf-java:3.10.0")
     implementation("org.apache.logging.log4j:log4j-api:2.12.1")

@@ -12,6 +12,6 @@ interface TraceShipper {
     /**
      * Ship [report] to an Apollo Engine server.
      */
-    fun ship(report: FullTracesReport)
+    suspend fun ship(report: FullTracesReport)
 
 }
