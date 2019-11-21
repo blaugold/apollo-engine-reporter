@@ -1,12 +1,6 @@
 package com.github.blaugold.apollo.engine
 
 /**
- * Function which generates a [ClientInfo] from the passed [TraceContext], for inclusion
- * in the trace. May return null if a ClientInfo can not be created for the given trace.
- */
-typealias ClientInfoFactory = (TraceContext) -> ClientInfo?
-
-/**
  * Client info used to differentiate traces from different clients.
  */
 data class ClientInfo(

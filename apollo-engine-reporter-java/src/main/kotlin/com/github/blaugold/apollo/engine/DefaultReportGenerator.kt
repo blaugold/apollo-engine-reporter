@@ -33,17 +33,13 @@ class DefaultReportGenerator(
             }
             .build()
 
-    override fun getTrace(trace: QueryTrace,
-                          clientInfo: ClientInfo?,
-                          errors: List<GraphQLError>?,
-                          httpTrace: HttpTrace?): Trace = Trace.newBuilder().apply {
-        startTime = trace.startTime.toTimestamp()
-        endTime = trace.endTime.toTimestamp()
-        durationNs = trace.duration
+    override fun getTrace(input: TraceInput): Trace = Trace.newBuilder().apply {
+        val (trace, clientInfo, errors, httpTrace) = input
 
-        if (clientInfo != null) setClientInfo(clientInfo)
+        buildTrace(trace)
 
-        if (httpTrace != null) setHttp(httpTrace)
+        clientInfo?.also { buildClientInfo(it) }
+        httpTrace?.also { buildHttp(it) }
 
         trace.execution.resolvers.forEach { getNode(it.path).buildResolverNode(it) }
         errors?.forEach { getNode(it.path).addError(it) }
@@ -62,7 +58,13 @@ class DefaultReportGenerator(
 
 }
 
-private fun Trace.Builder.setHttp(httpTrace: HttpTrace) {
+private fun Trace.Builder.buildTrace(trace: QueryTrace) {
+    startTime = trace.startTime.toTimestamp()
+    endTime = trace.endTime.toTimestamp()
+    durationNs = trace.duration
+}
+
+private fun Trace.Builder.buildHttp(httpTrace: HttpTrace) {
     httpBuilder.apply {
         httpTrace.protocol?.also { protocol = it }
         httpTrace.secure?.also { secure = it }
@@ -94,7 +96,7 @@ private fun Trace.Builder.setHttp(httpTrace: HttpTrace) {
     }
 }
 
-private fun Trace.Builder.setClientInfo(clientInfo: ClientInfo) {
+private fun Trace.Builder.buildClientInfo(clientInfo: ClientInfo) {
     clientInfo.name?.also { clientName = it }
     clientInfo.version?.also { clientVersion = it }
     clientInfo.address?.also { clientAddress = it }

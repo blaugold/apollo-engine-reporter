@@ -1,0 +1,31 @@
+package com.github.blaugold.apollo.engine
+
+import graphql.GraphQLError
+import mdg.engine.proto.GraphqlApolloReporing.Trace
+
+/**
+ * Input for generating a [Trace].
+ */
+data class TraceInput(
+
+        /**
+         * The query tracing data to build the [Trace].
+         */
+        val trace: QueryTrace,
+
+        /**
+         * The client info to include in the [Trace].
+         */
+        val clientInfo: ClientInfo? = null,
+
+        /**
+         * The errors to include in the [Trace].
+         */
+        val errors: List<GraphQLError>? = null,
+
+        /**
+         * The HTTP tracing data to include in the [Trace].
+         */
+        val httpTrace: HttpTrace? = null
+
+)

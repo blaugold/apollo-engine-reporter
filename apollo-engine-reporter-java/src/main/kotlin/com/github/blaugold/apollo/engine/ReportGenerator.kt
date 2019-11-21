@@ -1,6 +1,5 @@
 package com.github.blaugold.apollo.engine
 
-import graphql.GraphQLError
 import mdg.engine.proto.GraphqlApolloReporing.*
 
 /**
@@ -14,12 +13,9 @@ interface ReportGenerator {
     fun getReportHeader(): ReportHeader
 
     /**
-     * Returns a [Trace] build from the given [trace], [clientInfo] and [errors].
+     * Returns a [Trace] build from the given trace [input].
      */
-    fun getTrace(trace: QueryTrace,
-                 clientInfo: ClientInfo? = null,
-                 errors: List<GraphQLError>? = null,
-                 httpTrace: HttpTrace? = null): Trace
+    fun getTrace(input: TraceInput): Trace
 
     /**
      * Returns a [FullTracesReport] build from the given [header] and [traces].

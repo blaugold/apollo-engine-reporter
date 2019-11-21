@@ -8,7 +8,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.net.InetAddress
-import java.time.Instant
 
 internal class DefaultReportGeneratorTest {
 
@@ -96,10 +95,10 @@ internal class DefaultReportGeneratorTest {
         fun `include start time`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             assertThat(trace.startTime).isEqualTo(queryTrace.startTime.toTimestamp())
@@ -109,10 +108,10 @@ internal class DefaultReportGeneratorTest {
         fun `include end time`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             assertThat(trace.endTime).isEqualTo(queryTrace.endTime.toTimestamp())
@@ -122,10 +121,10 @@ internal class DefaultReportGeneratorTest {
         fun `include duration`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             assertThat(trace.durationNs).isEqualTo(queryTrace.duration)
@@ -135,11 +134,11 @@ internal class DefaultReportGeneratorTest {
         fun `include client name`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val clientInfo = ClientInfo(name = "name")
 
             // When
-            val trace = generator.getTrace(queryTrace, clientInfo)
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
 
             // Then
             assertThat(trace.clientName).isEqualTo(clientInfo.name)
@@ -149,11 +148,11 @@ internal class DefaultReportGeneratorTest {
         fun `include client version`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val clientInfo = ClientInfo(version = "version")
 
             // When
-            val trace = generator.getTrace(queryTrace, clientInfo)
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
 
             // Then
             assertThat(trace.clientVersion).isEqualTo(clientInfo.version)
@@ -163,11 +162,11 @@ internal class DefaultReportGeneratorTest {
         fun `include client address`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val clientInfo = ClientInfo(address = "address")
 
             // When
-            val trace = generator.getTrace(queryTrace, clientInfo)
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
 
             // Then
             assertThat(trace.clientAddress).isEqualTo(clientInfo.address)
@@ -177,11 +176,11 @@ internal class DefaultReportGeneratorTest {
         fun `include client reference id`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val clientInfo = ClientInfo(referenceId = "referenceId")
 
             // When
-            val trace = generator.getTrace(queryTrace, clientInfo)
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
 
             // Then
             assertThat(trace.clientReferenceId).isEqualTo(clientInfo.referenceId)
@@ -196,14 +195,14 @@ internal class DefaultReportGeneratorTest {
         fun `dont include originalFieldName for non-aliased selection`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(
+            val resolverTrace = resolverTrace(
                     path = listOf("a"),
                     fieldName = "a"
             )
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -215,14 +214,14 @@ internal class DefaultReportGeneratorTest {
         fun `aliased selection`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(
+            val resolverTrace = resolverTrace(
                     path = listOf("a"),
                     fieldName = "b"
             )
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -235,13 +234,13 @@ internal class DefaultReportGeneratorTest {
             // Given
             val generator = DefaultReportGenerator()
             val indexSegment = 0
-            val queryTrace = testTrace(listOf(
-                    testResolverTrace(path = listOf("a")),
-                    testResolverTrace(path = listOf("a", indexSegment, "a"))
+            val queryTrace = queryTrace(listOf(
+                    resolverTrace(path = listOf("a")),
+                    resolverTrace(path = listOf("a", indexSegment, "a"))
             ))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first().childList.first()
@@ -252,11 +251,11 @@ internal class DefaultReportGeneratorTest {
         fun `include type`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(path = listOf("a"))
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val resolverTrace = resolverTrace(path = listOf("a"))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -267,11 +266,11 @@ internal class DefaultReportGeneratorTest {
         fun `include parentType`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(path = listOf("a"))
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val resolverTrace = resolverTrace(path = listOf("a"))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -282,11 +281,11 @@ internal class DefaultReportGeneratorTest {
         fun `include startTime`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(path = listOf("a"))
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val resolverTrace = resolverTrace(path = listOf("a"))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -297,11 +296,11 @@ internal class DefaultReportGeneratorTest {
         fun `include endTime`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(path = listOf("a"))
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val resolverTrace = resolverTrace(path = listOf("a"))
+            val queryTrace = queryTrace(listOf(resolverTrace))
 
             // When
-            val trace = generator.getTrace(queryTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace))
 
             // Then
             val node = trace.root.childList.first()
@@ -312,8 +311,8 @@ internal class DefaultReportGeneratorTest {
         fun `include error`() {
             // Given
             val generator = DefaultReportGenerator()
-            val resolverTrace = testResolverTrace(path = listOf("a"))
-            val queryTrace = testTrace(listOf(resolverTrace))
+            val resolverTrace = resolverTrace(path = listOf("a"))
+            val queryTrace = queryTrace(listOf(resolverTrace))
             val gqlError = GraphqlErrorBuilder.newError()
                     .message("Message")
                     .location(SourceLocation(5, 7))
@@ -321,7 +320,7 @@ internal class DefaultReportGeneratorTest {
                     .build()
 
             // When
-            val trace = generator.getTrace(queryTrace, errors = listOf(gqlError))
+            val trace = generator.getTrace(TraceInput(queryTrace, errors = listOf(gqlError)))
             println(trace)
 
             // Then
@@ -342,11 +341,11 @@ internal class DefaultReportGeneratorTest {
         fun `include protocol`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(protocol = "HTTP/1.1")
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.protocol).isEqualTo(httpTrace.protocol)
@@ -356,11 +355,11 @@ internal class DefaultReportGeneratorTest {
         fun `include secure`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(secure = true)
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.secure).isEqualTo(httpTrace.secure)
@@ -370,11 +369,11 @@ internal class DefaultReportGeneratorTest {
         fun `include method`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(method = HttpMethod.Get)
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.method).isEqualTo(Method.GET)
@@ -384,11 +383,11 @@ internal class DefaultReportGeneratorTest {
         fun `include status code`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(statusCode = 200)
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.statusCode).isEqualTo(httpTrace.statusCode)
@@ -398,11 +397,11 @@ internal class DefaultReportGeneratorTest {
         fun `include path`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(path = "path")
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.path).isEqualTo(httpTrace.path)
@@ -413,11 +412,11 @@ internal class DefaultReportGeneratorTest {
         fun `include host`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(host = "host")
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.host).isEqualTo(httpTrace.host)
@@ -427,11 +426,11 @@ internal class DefaultReportGeneratorTest {
         fun `include request headers`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(requestHeaders = mapOf("A" to listOf("A")))
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.requestHeadersMap.mapValues { it.value.valueList.toList() })
@@ -442,47 +441,17 @@ internal class DefaultReportGeneratorTest {
         fun `include response headers`() {
             // Given
             val generator = DefaultReportGenerator()
-            val queryTrace = testTrace()
+            val queryTrace = queryTrace()
             val httpTrace = HttpTrace(responseHeaders = mapOf("A" to listOf("A")))
 
             // When
-            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+            val trace = generator.getTrace(TraceInput(queryTrace, httpTrace = httpTrace))
 
             // Then
             assertThat(trace.http.responseHeadersMap.mapValues { it.value.valueList.toList() })
                     .isEqualTo(httpTrace.responseHeaders)
         }
 
-    }
-
-    private fun testResolverTrace(
-            path: List<Any>,
-            parentType: String = "Parent",
-            returnType: String = "Return",
-            fieldName: String = path.lastOrNull().let { if (it is String) it else "FieldName" },
-            startOffset: Long = 31,
-            duration: Long = 5
-    ): ResolverTrace {
-        return ResolverTrace(
-                path = path,
-                parentType = parentType,
-                returnType = returnType,
-                fieldName = fieldName,
-                startOffset = startOffset,
-                duration = duration
-        )
-    }
-
-    private fun testTrace(resolvers: List<ResolverTrace> = emptyList()): QueryTrace {
-        return QueryTrace(
-                version = 1,
-                startTime = Instant.now(),
-                endTime = Instant.now(),
-                duration = 0,
-                parsing = ParsingTrace(startOffset = 0, duration = 0),
-                validation = ValidationTrace(startOffset = 0, duration = 0),
-                execution = ExecutionTrace(resolvers = resolvers)
-        )
     }
 
 }

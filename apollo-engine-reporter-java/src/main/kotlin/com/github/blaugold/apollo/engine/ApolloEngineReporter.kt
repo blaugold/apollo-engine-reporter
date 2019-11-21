@@ -12,6 +12,107 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
+ * Returns a list of [TraceInputProcessor]s which provide save defaults.
+ * Per default the [ClientInfoTraceInputProcessor] is included and a [WhitelistHeaderProcessor]
+ * which allows theses headers:
+ * ```
+ * setOf(
+ *   "Accept",
+ *   "Accept-Encoding",
+ *   "Accept-Language",
+ *   "ApolloGraphQL-Client-Name",
+ *   "ApolloGraphQL-Client-Version",
+ *   "Cache-Control",
+ *   "Connection",
+ *   "Content-Length",
+ *   "Content-Type",
+ *   "Date",
+ *   "DNT",
+ *   "Host",
+ *   "Origin",
+ *   "Referrer",
+ *   "Sec-Fetch-Mode",
+ *   "Sec-Fetch-Site",
+ *   "Transfer-Encoding",
+ *   "User-Agent",
+ *   "Via"
+ * )
+ * ```
+ */
+fun traceInputProcessors(
+
+        /**
+         * Whether or not to include the [ClientInfoTraceInputProcessor]
+         */
+        clientInfo: Boolean = true,
+
+        /**
+         * The set of headers to blacklist.
+         */
+        headerBlacklist: Set<String>? = null,
+
+        /**
+         * The set of headers to whitelist.
+         */
+        headerWhitelist: Set<String>? = null,
+
+        /**
+         * The strategy to use to generate a replacement value when removing a header.
+         */
+        headerReplacementStrategy: HeaderReplacementStrategy = DefaultHeaderReplacementStrategy()
+
+): List<TraceInputProcessor> {
+    val processors = mutableListOf<TraceInputProcessor>()
+
+    if (clientInfo) {
+        processors.add(ClientInfoTraceInputProcessor())
+    }
+
+    headerBlacklist?.also {
+        processors.add(BlacklistHeaderProcessor(
+                blacklist = it,
+                replacementStrategy = headerReplacementStrategy
+        ))
+    }
+
+    headerWhitelist?.also {
+        processors.add(WhitelistHeaderProcessor(
+                whitelist = it,
+                replacementStrategy = headerReplacementStrategy
+        ))
+    }
+
+    if (headerBlacklist == null && headerWhitelist == null) {
+        processors.add(WhitelistHeaderProcessor(
+                whitelist = setOf(                    
+                        "Accept",
+                        "Accept-Encoding",
+                        "Accept-Language",
+                        "ApolloGraphQL-Client-Name",
+                        "ApolloGraphQL-Client-Version",
+                        "Cache-Control",
+                        "Connection",
+                        "Content-Length",
+                        "Content-Type",
+                        "Date",
+                        "DNT",
+                        "Host",
+                        "Origin",
+                        "Referrer",
+                        "Sec-Fetch-Mode",
+                        "Sec-Fetch-Site",
+                        "Transfer-Encoding",
+                        "User-Agent",
+                        "Via"
+                ),
+                replacementStrategy = headerReplacementStrategy
+        ))
+    }
+
+    return processors
+}
+
+/**
  * Reporter which ships traces to an Apollo Engine server.
  */
 class ApolloEngineReporter(
@@ -32,9 +133,10 @@ class ApolloEngineReporter(
         private val reportGenerator: ReportGenerator,
 
         /**
-         * The [ClientInfoFactory] used by this reporter.
+         * A list of [TraceInputProcessor] in the order in which they should be processing
+         * [TraceInput]s.
          */
-        private val clientInfoFactory: ClientInfoFactory = { null },
+        private val traceInputProcessors: List<TraceInputProcessor> = traceInputProcessors(),
 
         /**
          * The amount of traces in bytes to collect in the buffer before flushing them in a report.
@@ -129,12 +231,15 @@ class ApolloEngineReporter(
     private suspend fun processTrace(traceContext: TraceContext) {
         val queryDoc = parser.parseDocument(traceContext.query)
         val signature = querySignatureStrategy.computeSignature(queryDoc, traceContext.operation)
-        val trace = reportGenerator.getTrace(
+
+        val input = traceInputProcessors.fold(TraceInput(
                 traceContext.trace,
-                clientInfoFactory(traceContext),
+                null,
                 traceContext.errors,
                 traceContext.http
-        )
+        )) { acc, traceInputProcessor -> traceInputProcessor.process(acc) }
+
+        val trace = reportGenerator.getTrace(input)
 
         buffer.addTrace(signature, trace)
 
@@ -162,7 +267,13 @@ class ApolloEngineReporter(
         }
 
         val batchJobs = batches.map { batch ->
-            log.debug("Shipping ${batch.values.map { it.size }.sum()} traces in next report.")
+            if (log.isDebugEnabled) {
+                log.debug("Shipping ${batch.values.map { it.size }.sum()} traces in next report.")
+            }
+
+            if (log.isTraceEnabled) {
+                log.trace(batch.toString())
+            }
 
             coroutineScope.launch {
                 traceShipper.ship(reportGenerator.getReport(reportGenerator.getReportHeader(), batch))

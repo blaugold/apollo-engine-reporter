@@ -4,7 +4,6 @@ import mdg.engine.proto.GraphqlApolloReporing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Duration
-import java.time.Instant
 
 internal class ApolloEngineReporterTest {
 
@@ -85,15 +84,7 @@ internal class ApolloEngineReporterTest {
     private fun testTrace(): TraceContext = TraceContext(
             query = "query { a }",
             operation = null,
-            trace = QueryTrace(
-                    version = 1,
-                    startTime = Instant.now(),
-                    endTime = Instant.now(),
-                    duration = 0,
-                    parsing = ParsingTrace(startOffset = 0, duration = 0),
-                    validation = ValidationTrace(startOffset = 0, duration = 0),
-                    execution = ExecutionTrace(resolvers = listOf())
-            )
+            trace = queryTrace()
     )
 
     class TestTraceShipper : TraceShipper {

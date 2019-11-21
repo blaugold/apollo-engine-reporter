@@ -36,7 +36,9 @@ class E2ETest {
                 traceShipper = DefaultTraceShipper(apiKey = testApiKey),
                 querySignatureStrategy = DefaultQuerySignatureStrategy,
                 reportGenerator = DefaultReportGenerator(),
-                clientInfoFactory = { ClientInfo(name = "E2ETest", version = Version.string) }
+                traceInputProcessors = traceInputProcessors() + listOf(traceInputProcessor {
+                    it.copy(clientInfo = ClientInfo(name = "E2ETest", version = Version.string))
+                })
         )
 
         reporter.start()
