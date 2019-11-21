@@ -3,6 +3,7 @@ package com.github.blaugold.apollo.engine
 import graphql.GraphqlErrorBuilder
 import graphql.execution.ExecutionPath
 import graphql.language.SourceLocation
+import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Method
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -330,6 +331,126 @@ internal class DefaultReportGeneratorTest {
             val location = error.locationList.first()
             assertThat(location.line).isEqualTo(gqlError.locations.first().line)
             assertThat(location.column).isEqualTo(gqlError.locations.first().column)
+        }
+
+    }
+
+    @Nested
+    inner class Http {
+
+        @Test
+        fun `include protocol`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(protocol = "HTTP/1.1")
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.protocol).isEqualTo(httpTrace.protocol)
+        }
+
+        @Test
+        fun `include secure`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(secure = true)
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.secure).isEqualTo(httpTrace.secure)
+        }
+
+        @Test
+        fun `include method`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(method = HttpMethod.Get)
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.method).isEqualTo(Method.GET)
+        }
+
+        @Test
+        fun `include status code`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(statusCode = 200)
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.statusCode).isEqualTo(httpTrace.statusCode)
+        }
+
+        @Test
+        fun `include path`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(path = "path")
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.path).isEqualTo(httpTrace.path)
+        }
+
+
+        @Test
+        fun `include host`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(host = "host")
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.host).isEqualTo(httpTrace.host)
+        }
+
+        @Test
+        fun `include request headers`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(requestHeaders = mapOf("A" to listOf("A")))
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.requestHeadersMap.mapValues { it.value.valueList.toList() })
+                    .isEqualTo(httpTrace.requestHeaders)
+        }
+
+        @Test
+        fun `include response headers`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val queryTrace = testTrace()
+            val httpTrace = HttpTrace(responseHeaders = mapOf("A" to listOf("A")))
+
+            // When
+            val trace = generator.getTrace(queryTrace, httpTrace = httpTrace)
+
+            // Then
+            assertThat(trace.http.responseHeadersMap.mapValues { it.value.valueList.toList() })
+                    .isEqualTo(httpTrace.responseHeaders)
         }
 
     }

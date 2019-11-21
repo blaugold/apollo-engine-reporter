@@ -18,7 +18,8 @@ interface ReportGenerator {
      */
     fun getTrace(trace: QueryTrace,
                  clientInfo: ClientInfo? = null,
-                 errors: List<GraphQLError>? = null): Trace
+                 errors: List<GraphQLError>? = null,
+                 httpTrace: HttpTrace? = null): Trace
 
     /**
      * Returns a [FullTracesReport] build from the given [header] and [traces].

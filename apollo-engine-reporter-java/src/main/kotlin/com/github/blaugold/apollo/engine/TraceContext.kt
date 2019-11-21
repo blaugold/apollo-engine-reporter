@@ -29,6 +29,11 @@ data class TraceContext(
         val errors: List<GraphQLError>? = emptyList(),
 
         /**
+         * The trace of the http request which was used to submit the traced query.
+         */
+        val http: HttpTrace? = null,
+
+        /**
          * Application specific context object.
          */
         val context: Any? = null

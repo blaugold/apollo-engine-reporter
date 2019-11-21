@@ -2,6 +2,8 @@ package com.github.blaugold.apollo.engine
 
 import graphql.GraphQLError
 import mdg.engine.proto.GraphqlApolloReporing.*
+import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Method
+import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Values
 import mdg.engine.proto.GraphqlApolloReporing.Trace.Node
 import java.net.InetAddress
 
@@ -33,12 +35,15 @@ class DefaultReportGenerator(
 
     override fun getTrace(trace: QueryTrace,
                           clientInfo: ClientInfo?,
-                          errors: List<GraphQLError>?): Trace = Trace.newBuilder().apply {
+                          errors: List<GraphQLError>?,
+                          httpTrace: HttpTrace?): Trace = Trace.newBuilder().apply {
         startTime = trace.startTime.toTimestamp()
         endTime = trace.endTime.toTimestamp()
         durationNs = trace.duration
 
         if (clientInfo != null) setClientInfo(clientInfo)
+
+        if (httpTrace != null) setHttp(httpTrace)
 
         trace.execution.resolvers.forEach { getNode(it.path).buildResolverNode(it) }
         errors?.forEach { getNode(it.path).addError(it) }
@@ -55,6 +60,38 @@ class DefaultReportGenerator(
             })
             .build()
 
+}
+
+private fun Trace.Builder.setHttp(httpTrace: HttpTrace) {
+    httpBuilder.apply {
+        httpTrace.protocol?.also { protocol = it }
+        httpTrace.secure?.also { secure = it }
+        httpTrace.method?.also {
+            method = when (it) {
+                HttpMethod.Connect -> Method.CONNECT
+                HttpMethod.Delete -> Method.DELETE
+                HttpMethod.Get -> Method.GET
+                HttpMethod.Head -> Method.HEAD
+                HttpMethod.Options -> Method.OPTIONS
+                HttpMethod.Patch -> Method.PATCH
+                HttpMethod.Post -> Method.POST
+                HttpMethod.Put -> Method.PUT
+                HttpMethod.Trace -> Method.TRACE
+                HttpMethod.Unknown -> Method.UNKNOWN
+                HttpMethod.Unrecognized -> Method.UNRECOGNIZED
+            }
+        }
+        httpTrace.path?.also { path = it }
+        httpTrace.statusCode?.also { statusCode = it }
+        httpTrace.host?.also { host = it }
+
+        httpTrace.requestHeaders?.also { headers ->
+            putAllRequestHeaders(headers.mapValues { Values.newBuilder().addAllValue(it.value).build() })
+        }
+        httpTrace.responseHeaders?.also { headers ->
+            putAllResponseHeaders(headers.mapValues { Values.newBuilder().addAllValue(it.value).build() })
+        }
+    }
 }
 
 private fun Trace.Builder.setClientInfo(clientInfo: ClientInfo) {

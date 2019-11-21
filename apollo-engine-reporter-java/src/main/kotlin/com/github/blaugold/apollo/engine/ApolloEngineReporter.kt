@@ -132,7 +132,8 @@ class ApolloEngineReporter(
         val trace = reportGenerator.getTrace(
                 traceContext.trace,
                 clientInfoFactory(traceContext),
-                traceContext.errors
+                traceContext.errors,
+                traceContext.http
         )
 
         buffer.addTrace(signature, trace)
