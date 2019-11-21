@@ -68,14 +68,16 @@ class DefaultTraceShipper(
             isServerError
         }
 
-        when (response) {
-            null -> log.warn("Gave up sending report to server after $maxRetries retries.")
-            else -> {
-                if (response.isSuccessful)
-                    log.debug("Successful shipped traces to Apollo Engine Server.")
-                else
-                    log.error("Failed to ship traces to Apollo Engine server: ${response.code}: " +
-                            "${response.body?.string()}")
+        response.use {
+            when (it) {
+                null -> log.warn("Gave up sending report to server after $maxRetries retries.")
+                else -> {
+                    if (it.isSuccessful)
+                        log.debug("Successful shipped traces to Apollo Engine Server.")
+                    else
+                        log.error("Failed to ship traces to Apollo Engine server: ${it.code}: " +
+                                "${it.body?.string()}")
+                }
             }
         }
     }
@@ -86,9 +88,11 @@ class DefaultTraceShipper(
         val backoffTimeMs = backoffTime.toMillis()
 
         while (tries < maxRetries) {
+            tries++
+
             val response = client.newCall(request).toDeferred().await()
             if (shouldRetry(response)) {
-                tries++
+                response.close()
                 delay(exponentialBackoffMs(tries, backoffTimeMs))
             } else return response
         }
