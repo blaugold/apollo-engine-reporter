@@ -98,7 +98,7 @@ fun traceInputProcessors(
 
     if (headerBlacklist == null && headerWhitelist == null) {
         processors.add(WhitelistHeaderProcessor(
-                whitelist = setOf(                    
+                whitelist = setOf(
                         "Accept",
                         "Accept-Encoding",
                         "Accept-Language",
@@ -207,7 +207,7 @@ class ApolloEngineReporter(
 
         executor = createExecutor()
         coroutineDispatcher = executor.asCoroutineDispatcher()
-        coroutineScope = CoroutineScope(coroutineDispatcher)
+        coroutineScope = CoroutineScope(coroutineDispatcher + SupervisorJob())
         scheduledFlushJob = startScheduledFlushing()
     }
 
@@ -221,13 +221,14 @@ class ApolloEngineReporter(
         check(started.get()) { "Reporter has not been started yet." }
         check(stopped.compareAndSet(false, true)) { "Reporter has already been stopped." }
 
-        runBlocking(coroutineDispatcher) {
-            launch { scheduledFlushJob.cancelAndJoin() }
+        runBlocking {
+            scheduledFlushJob.cancel()
 
-            launch { activeProcessTraceJobs.joinAll() }
+            val flushJob = coroutineScope.launch(CoroutineExceptionHandler { _, e ->
+                log.error("Error while flushing during stopping:", e)
+            }) { flush(emptyBuffer = true) }
 
-            // Make sure all traces in buffer are flushed
-            launch { flush(emptyBuffer = true) }
+            (activeProcessTraceJobs + scheduledFlushJob + flushJob).joinAll()
         }
 
         coroutineDispatcher.close()
@@ -237,7 +238,10 @@ class ApolloEngineReporter(
         check(started.get()) { "Reporter has not been started yet." }
         check(!stopped.get()) { "Reporter has already been stopped." }
 
-        val job = coroutineScope.launch { processTrace(traceContext) }
+        val job = coroutineScope.launch(CoroutineExceptionHandler { _, e ->
+            log.error("Error while processing trace:", e)
+        }) { processTrace(traceContext) }
+
         activeProcessTraceJobs.add(job)
         job.invokeOnCompletion { activeProcessTraceJobs.remove(job) }
     }
@@ -286,13 +290,15 @@ class ApolloEngineReporter(
                 log.debug("Shipping ${batch.values.map { it.size }.sum()} traces in next report.")
             }
 
+            val report = reportGenerator.getReport(reportGenerator.getReportHeader(), batch)
+
             if (log.isTraceEnabled) {
-                log.trace(batch.toString())
+                log.trace("Full report:\n$report")
             }
 
-            coroutineScope.launch {
-                traceShipper.ship(reportGenerator.getReport(reportGenerator.getReportHeader(), batch))
-            }
+            coroutineScope.launch(CoroutineExceptionHandler { _, e ->
+                log.error("Error while shipping report:", e)
+            }) { traceShipper.ship(report) }
         }
 
         batchJobs.toList().joinAll()
@@ -310,8 +316,10 @@ class ApolloEngineReporter(
     private fun startScheduledFlushing(): Job = coroutineScope.launch {
         while (isActive) {
             delay(reportInterval.toMillis())
-            // Do not wait for flushing to complete to keep intervals even
-            launch { flush(emptyBuffer = true) }
+            // We are not joining to wait for flushing to complete to keep intervals even
+            coroutineScope.launch(CoroutineExceptionHandler { _, e ->
+                log.error("Error while performing scheduled flush:", e)
+            }) { flush(emptyBuffer = true) }
         }
     }
 

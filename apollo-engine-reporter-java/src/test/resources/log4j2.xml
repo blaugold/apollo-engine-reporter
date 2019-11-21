@@ -1,6 +1,6 @@
 <Configuration>
     <Loggers>
-        <Root level="debug">
+        <Root level="trace">
             <AppenderRef ref="stdout"/>
         </Root>
     </Loggers>
