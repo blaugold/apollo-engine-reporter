@@ -53,6 +53,7 @@ open class TraceReporterInstrumentation(
                 trace = reifyTracingData(tracingData),
                 query = parameters.query,
                 operation = parameters.operation,
+                variables = parameters.variables,
                 errors = executionResult.errors,
                 context = parameters.getContext()
         )

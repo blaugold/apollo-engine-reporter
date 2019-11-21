@@ -19,6 +19,11 @@ data class TraceContext(
         val operation: String?,
 
         /**
+         * The variables used in the traced query.
+         */
+        val variables: Map<String, Any>? = null,
+
+        /**
          * The tracing data of the query execution.
          */
         val trace: QueryTrace,

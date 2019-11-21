@@ -1,5 +1,7 @@
 package com.github.blaugold.apollo.engine
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import graphql.GraphqlErrorBuilder
 import graphql.execution.ExecutionPath
 import graphql.language.SourceLocation
@@ -138,7 +140,7 @@ internal class DefaultReportGeneratorTest {
             val clientInfo = ClientInfo(name = "name")
 
             // When
-            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo = clientInfo))
 
             // Then
             assertThat(trace.clientName).isEqualTo(clientInfo.name)
@@ -152,7 +154,7 @@ internal class DefaultReportGeneratorTest {
             val clientInfo = ClientInfo(version = "version")
 
             // When
-            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo = clientInfo))
 
             // Then
             assertThat(trace.clientVersion).isEqualTo(clientInfo.version)
@@ -166,7 +168,7 @@ internal class DefaultReportGeneratorTest {
             val clientInfo = ClientInfo(address = "address")
 
             // When
-            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo = clientInfo))
 
             // Then
             assertThat(trace.clientAddress).isEqualTo(clientInfo.address)
@@ -180,7 +182,7 @@ internal class DefaultReportGeneratorTest {
             val clientInfo = ClientInfo(referenceId = "referenceId")
 
             // When
-            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo))
+            val trace = generator.getTrace(TraceInput(queryTrace, clientInfo = clientInfo))
 
             // Then
             assertThat(trace.clientReferenceId).isEqualTo(clientInfo.referenceId)
@@ -450,6 +452,41 @@ internal class DefaultReportGeneratorTest {
             // Then
             assertThat(trace.http.responseHeadersMap.mapValues { it.value.valueList.toList() })
                     .isEqualTo(httpTrace.responseHeaders)
+        }
+
+    }
+
+    @Nested
+    inner class Variables {
+
+        @Test
+        fun `include variables serialized to JSON`() {
+            // Given
+            val generator = DefaultReportGenerator()
+            val variables = mapOf("A" to "A")
+
+            // When
+            val trace = generator.getTrace(TraceInput(queryTrace(), variables = variables))
+
+            // Then
+            assertThat(trace.details.variablesJsonMap).isEqualTo(mapOf("A" to "\"A\""))
+        }
+
+        @Test
+        fun `variable JSON serialization failure`() {
+            // Given
+            val mapper = ObjectMapper().configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, true)
+            val generator = DefaultReportGenerator(variableObjectMapper = mapper)
+
+            // Default ObjectMapper dose not know hot to handle Java Time types
+            val variables = mapOf("A" to Object())
+
+            // When
+            val trace = generator.getTrace(TraceInput(queryTrace(), variables = variables))
+
+            // Then
+            assertThat(trace.details.variablesJsonMap)
+                    .isEqualTo(mapOf("A" to "\"__JSON_SERIALIZATION_FAILED__\""))
         }
 
     }

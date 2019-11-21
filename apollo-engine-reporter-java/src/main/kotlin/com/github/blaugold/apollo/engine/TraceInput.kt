@@ -14,6 +14,11 @@ data class TraceInput(
         val trace: QueryTrace,
 
         /**
+         * The query variables to include in the [Trace].
+         */
+        val variables: Map<String, Any>? = null,
+
+        /**
          * The client info to include in the [Trace].
          */
         val clientInfo: ClientInfo? = null,

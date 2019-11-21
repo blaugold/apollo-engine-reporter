@@ -18,7 +18,11 @@ interface TraceInputProcessor {
 
 fun traceInputProcessor(process: (TraceInput) -> TraceInput): TraceInputProcessor =
         object : TraceInputProcessor {
-            override fun process(input: TraceInput): TraceInput {
-                return process(input)
-            }
+            override fun process(input: TraceInput): TraceInput = process(input)
+        }
+
+fun variablesProcessor(process: (Map<String, Any>?) -> Map<String, Any>?): TraceInputProcessor =
+        object : TraceInputProcessor {
+            override fun process(input: TraceInput): TraceInput =
+                    input.copy(variables = input.variables.let(process))
         }

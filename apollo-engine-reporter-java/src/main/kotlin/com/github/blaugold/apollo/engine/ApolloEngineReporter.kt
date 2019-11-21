@@ -13,8 +13,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Returns a list of [TraceInputProcessor]s which provide save defaults.
- * Per default the [ClientInfoTraceInputProcessor] is included and a [WhitelistHeaderProcessor]
- * which allows theses headers:
+ *
+ * Per default the [ClientInfoTraceInputProcessor] is included, variables are removed and a
+ * [WhitelistHeaderProcessor] to allow theses headers is configured:
  * ```
  * setOf(
  *   "Accept",
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *   "DNT",
  *   "Host",
  *   "Origin",
- *   "Referrer",
+ *   "Referer",
  *   "Sec-Fetch-Mode",
  *   "Sec-Fetch-Site",
  *   "Transfer-Encoding",
@@ -59,10 +60,23 @@ fun traceInputProcessors(
         /**
          * The strategy to use to generate a replacement value when removing a header.
          */
-        headerReplacementStrategy: HeaderReplacementStrategy = DefaultHeaderReplacementStrategy()
+        headerReplacementStrategy: HeaderReplacementStrategy = DefaultHeaderReplacementStrategy(),
+
+        /**
+         * A function which sanitizes query variables. If the function returns `null` all
+         * variables are removed.
+         *
+         * The function should remove all sensitive data like passwords, credit card numbers, ...
+         * which should not be sent to and stored by Apollo Engine.
+         *
+         * Per default all variables are removed.
+         */
+        variablesSanitizer: (Map<String, Any>) -> Map<String, Any>? = { null }
 
 ): List<TraceInputProcessor> {
     val processors = mutableListOf<TraceInputProcessor>()
+
+    processors.add(variablesProcessor { it?.let(variablesSanitizer) })
 
     if (clientInfo) {
         processors.add(ClientInfoTraceInputProcessor())
@@ -98,7 +112,7 @@ fun traceInputProcessors(
                         "DNT",
                         "Host",
                         "Origin",
-                        "Referrer",
+                        "Referer",
                         "Sec-Fetch-Mode",
                         "Sec-Fetch-Site",
                         "Transfer-Encoding",
@@ -234,6 +248,7 @@ class ApolloEngineReporter(
 
         val input = traceInputProcessors.fold(TraceInput(
                 traceContext.trace,
+                traceContext.variables,
                 null,
                 traceContext.errors,
                 traceContext.http

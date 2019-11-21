@@ -16,6 +16,7 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java:3.10.0")
     implementation("org.apache.logging.log4j:log4j-api:2.12.1")
     implementation("com.squareup.okhttp3:okhttp:4.2.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
     testImplementation("org.assertj:assertj-core:3.14.0")
     testImplementation("io.mockk:mockk:1.9.3")

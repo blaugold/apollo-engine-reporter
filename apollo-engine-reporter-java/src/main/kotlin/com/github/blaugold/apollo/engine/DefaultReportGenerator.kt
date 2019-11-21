@@ -1,10 +1,12 @@
 package com.github.blaugold.apollo.engine
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.GraphQLError
 import mdg.engine.proto.GraphqlApolloReporing.*
 import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Method
 import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Values
 import mdg.engine.proto.GraphqlApolloReporing.Trace.Node
+import org.apache.logging.log4j.LogManager
 import java.net.InetAddress
 
 /**
@@ -15,9 +17,18 @@ class DefaultReportGenerator(
         /**
          * The schema tag to include in [ReportHeader].
          */
-        private val schemaTag: String? = null
+        private val schemaTag: String? = null,
+
+        /**
+         * The [ObjectMapper] to use to serialize variables into JSON.
+         */
+        variableObjectMapper: ObjectMapper? = null
 
 ) : ReportGenerator {
+
+    private val log = LogManager.getLogger(javaClass)
+
+    private val variablesObjectMapper: ObjectMapper = variableObjectMapper ?: ObjectMapper()
 
     override fun getReportHeader(): ReportHeader = ReportHeader
             .newBuilder()
@@ -34,9 +45,11 @@ class DefaultReportGenerator(
             .build()
 
     override fun getTrace(input: TraceInput): Trace = Trace.newBuilder().apply {
-        val (trace, clientInfo, errors, httpTrace) = input
+        val (trace, variables, clientInfo, errors, httpTrace) = input
 
         buildTrace(trace)
+
+        variables?.also { buildVariables(it) }
 
         clientInfo?.also { buildClientInfo(it) }
         httpTrace?.also { buildHttp(it) }
@@ -55,6 +68,18 @@ class DefaultReportGenerator(
                 Traces.newBuilder().addAllTrace(traces).build()
             })
             .build()
+
+    private fun Trace.Builder.buildVariables(variables: Map<String, Any>) {
+        detailsBuilder.putAllVariablesJson(variables.mapValues {
+            try {
+                variablesObjectMapper.writeValueAsString(it.value)
+            } catch (e: Throwable) {
+                log.error("JSON serialization of GraphQL query variable failed:", e)
+
+                "\"__JSON_SERIALIZATION_FAILED__\""
+            }
+        })
+    }
 
 }
 
