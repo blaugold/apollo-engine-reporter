@@ -9,18 +9,21 @@ plugins {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    implementation(kotlin("reflect"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
-    implementation("com.graphql-java:graphql-java:13.0")
-    implementation("com.google.protobuf:protobuf-java:3.10.0")
-    implementation("org.apache.logging.log4j:log4j-api:2.12.1")
-    implementation("com.squareup.okhttp3:okhttp:4.2.2")
+    compileOnly("javax.servlet:javax.servlet-api:3.1.0")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.10.1")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
-    testImplementation("org.assertj:assertj-core:3.14.0")
+    implementation("com.google.protobuf:protobuf-java:3.10.0")
+    implementation("com.graphql-java:graphql-java:13.0")
+    implementation("com.squareup.okhttp3:okhttp:4.2.2")
+    implementation("org.apache.logging.log4j:log4j-api:2.12.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
+    implementation(kotlin("reflect"))
+    implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("javax.servlet:javax.servlet-api:3.1.0")
     testImplementation("org.apache.logging.log4j:log4j-core:2.12.1")
+    testImplementation("org.assertj:assertj-core:3.14.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
 }
 
 tasks.test {

@@ -1,5 +1,8 @@
 package com.github.blaugold.apollo.engine
 
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
+
 /**
  * A HTTP method.
  */
@@ -62,4 +65,35 @@ data class HttpTrace(
          */
         val responseHeaders: Map<String, List<String>>? = null
 
+) {
+
+    companion object
+
+}
+
+/**
+ * Creates a [HttpTrace] from the given [request] and [response].
+ */
+fun HttpTrace.Companion.fromServlet(request: HttpServletRequest,
+                                    response: HttpServletResponse): HttpTrace = HttpTrace(
+        protocol = request.protocol,
+        secure = request.isSecure,
+        method = request.method.let {
+            try {
+                HttpMethod.valueOf(it.toLowerCase().capitalize())
+            } catch (e: IllegalArgumentException) {
+                HttpMethod.Unrecognized
+            }
+        },
+        statusCode = response.status,
+        // TODO should path include a possible query string?
+        path = request.requestURI,
+        // TODO should host include a possible non standard port?
+        host = request.serverName,
+        requestHeaders = request.headerNames.toList().associateWith {
+            request.getHeaders(it).toList()
+        },
+        responseHeaders = response.headerNames.toList().associateWith {
+            response.getHeaders(it).toList()
+        }
 )
