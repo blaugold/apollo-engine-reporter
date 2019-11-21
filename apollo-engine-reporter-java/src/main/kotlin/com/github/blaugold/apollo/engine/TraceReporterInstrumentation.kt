@@ -1,6 +1,7 @@
 package com.github.blaugold.apollo.engine
 
 import graphql.ExecutionResult
+import graphql.ExecutionResultImpl
 import graphql.execution.instrumentation.Instrumentation
 import graphql.execution.instrumentation.SimpleInstrumentation
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
@@ -12,7 +13,7 @@ import kotlin.reflect.KClass
  * [Instrumentation] which can be used to hook into query execution to extract tracing data and pass
  * it to a [TraceReporter].
  */
-class TraceReporterInstrumentation(
+open class TraceReporterInstrumentation(
 
         /**
          * The [TraceReporter] to submit traces to.
@@ -32,21 +33,29 @@ class TraceReporterInstrumentation(
                     "installed and chained before TraceReporterInstrumentation."
         }
 
+        traceReporter.reportTrace(createTraceContext(executionResult, parameters))
+
+        val nextExecutionResult = if (removeTracingData) {
+            ExecutionResultImpl.newExecutionResult()
+                    .from(executionResult)
+                    .extensions(executionResult.extensions - "tracing")
+                    .build()
+        } else executionResult
+
+        return super.instrumentExecutionResult(nextExecutionResult, parameters)
+    }
+
+    open fun createTraceContext(executionResult: ExecutionResult,
+                                parameters: InstrumentationExecutionParameters): TraceContext {
         val tracingData = executionResult.extensions["tracing"]!!
 
-        if (removeTracingData) {
-            executionResult.extensions.remove("tracing")
-        }
-
-        traceReporter.reportTrace(TraceContext(
+        return TraceContext(
                 trace = reifyTracingData(tracingData),
                 query = parameters.query,
                 operation = parameters.operation,
                 errors = executionResult.errors,
                 context = parameters.getContext()
-        ))
-
-        return super.instrumentExecutionResult(executionResult, parameters)
+        )
     }
 
 }
