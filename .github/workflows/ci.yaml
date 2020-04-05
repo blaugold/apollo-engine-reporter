@@ -17,3 +17,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: reports
+          path: apollo-engine-reporter-java/build/reports
