@@ -6,7 +6,7 @@ import mdg.engine.proto.GraphqlApolloReporing.FullTracesReport
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.apache.logging.log4j.LogManager
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Duration
 import kotlin.math.pow
@@ -41,7 +41,7 @@ class DefaultTraceShipper(
 
 ) : TraceShipper {
 
-    private val log = LogManager.getLogger(javaClass)
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val client = OkHttpClient()
 

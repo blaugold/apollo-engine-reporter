@@ -6,7 +6,7 @@ import mdg.engine.proto.GraphqlApolloReporing.*
 import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Method
 import mdg.engine.proto.GraphqlApolloReporing.Trace.HTTP.Values
 import mdg.engine.proto.GraphqlApolloReporing.Trace.Node
-import org.apache.logging.log4j.LogManager
+import org.slf4j.LoggerFactory
 import java.net.InetAddress
 
 /**
@@ -26,7 +26,7 @@ class DefaultReportGenerator(
 
 ) : ReportGenerator {
 
-    private val log = LogManager.getLogger(javaClass)
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val variablesObjectMapper: ObjectMapper = variableObjectMapper ?: ObjectMapper()
 

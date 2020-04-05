@@ -3,7 +3,7 @@ package com.gabrielterwesten.apollo.engine
 import graphql.parser.Parser
 import kotlinx.coroutines.*
 import mdg.engine.proto.GraphqlApolloReporing.FullTracesReport
-import org.apache.logging.log4j.LogManager
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.Collections.synchronizedSet
 import java.util.concurrent.Executors.newScheduledThreadPool
@@ -179,7 +179,7 @@ class ApolloEngineReporter(
 
     private var stopped = AtomicBoolean(false)
 
-    private val log = LogManager.getLogger(javaClass)
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val parser = Parser()
 

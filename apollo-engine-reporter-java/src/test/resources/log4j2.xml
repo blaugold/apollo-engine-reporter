@@ -6,7 +6,7 @@
     </Loggers>
     <Appenders>
         <Console name="stdout" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %c{1.}: %p %m%n"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %p %30c{1.}: %m%n"/>
         </Console>
     </Appenders>
 </Configuration>

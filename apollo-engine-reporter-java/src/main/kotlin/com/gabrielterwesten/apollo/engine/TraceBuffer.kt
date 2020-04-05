@@ -1,7 +1,7 @@
 package com.gabrielterwesten.apollo.engine
 
 import mdg.engine.proto.GraphqlApolloReporing.Trace
-import org.apache.logging.log4j.LogManager
+import org.slf4j.LoggerFactory
 
 /**
  * Ring buffer for [Trace]s.
@@ -24,7 +24,7 @@ class TraceBuffer(
     var bufferedBytes = 0L
         private set
 
-    private val log = LogManager.getLogger(javaClass)
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val traces = mutableListOf<Entry>()
 
