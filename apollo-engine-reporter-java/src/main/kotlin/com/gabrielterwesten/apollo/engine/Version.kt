@@ -26,8 +26,4 @@ object Version {
 
     override fun toString(): String = string
 
-    override fun equals(other: Any?): Boolean = other === this
-
-    override fun hashCode(): Int = 31
-
 }
