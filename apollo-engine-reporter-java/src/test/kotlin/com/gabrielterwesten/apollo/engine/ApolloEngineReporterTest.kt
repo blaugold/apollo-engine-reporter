@@ -3,6 +3,7 @@ package com.gabrielterwesten.apollo.engine
 import mdg.engine.proto.GraphqlApolloReporing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertTimeout
 import java.time.Duration
 
 internal class ApolloEngineReporterTest {
@@ -36,7 +37,7 @@ internal class ApolloEngineReporterTest {
                 traceShipper = testShipper,
                 querySignatureStrategy = DefaultQuerySignatureStrategy,
                 reportGenerator = DefaultReportGenerator(),
-                reportInterval = Duration.ofMillis(100),
+                reportInterval = Duration.ofMillis(0),
                 // Never flush because of buffer going over threshold during this test
                 flushBufferThreshold = 1_000_000_000
         )
@@ -47,9 +48,11 @@ internal class ApolloEngineReporterTest {
 
         assertThat(testShipper.reports).isEmpty()
 
-        Thread.sleep(1000)
-
-        assertThat(testShipper.reports).hasSize(1)
+        assertTimeout(Duration.ofSeconds(5)) {
+            while (testShipper.reports.size != 1) {
+                Thread.sleep(100)
+            }
+        }
 
         reporter.stop()
     }
@@ -72,10 +75,11 @@ internal class ApolloEngineReporterTest {
 
         reporter.reportTrace(testTrace())
 
-        // Wait for the executor to run task which flushes buffer
-        Thread.sleep(100)
-
-        assertThat(testShipper.reports).hasSize(1)
+        assertTimeout(Duration.ofSeconds(5)) {
+            while (testShipper.reports.size != 1) {
+                Thread.sleep(100)
+            }
+        }
 
         reporter.stop()
     }
