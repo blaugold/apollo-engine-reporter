@@ -55,7 +55,12 @@ class DefaultReportGenerator(
         httpTrace?.also { buildHttp(it) }
 
         trace.execution.resolvers.forEach { getNode(it.path).buildResolverNode(it) }
-        errors?.forEach { getNode(it.path).addError(it) }
+        errors?.forEach {
+            when (it.path) {
+                null -> rootBuilder.addError(it)
+                else -> getNode(it.path).addError(it)
+            }
+        }
     }.build()
 
     override fun getReport(
