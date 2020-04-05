@@ -47,7 +47,7 @@ internal class ApolloEngineReporterTest {
 
         assertThat(testShipper.reports).isEmpty()
 
-        Thread.sleep(200)
+        Thread.sleep(1000)
 
         assertThat(testShipper.reports).hasSize(1)
 
