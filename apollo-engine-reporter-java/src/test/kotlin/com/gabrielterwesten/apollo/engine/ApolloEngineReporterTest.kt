@@ -37,7 +37,7 @@ internal class ApolloEngineReporterTest {
                 traceShipper = testShipper,
                 querySignatureStrategy = DefaultQuerySignatureStrategy,
                 reportGenerator = DefaultReportGenerator(),
-                reportInterval = Duration.ofMillis(0),
+                reportInterval = Duration.ofMillis(100),
                 // Never flush because of buffer going over threshold during this test
                 flushBufferThreshold = 1_000_000_000
         )

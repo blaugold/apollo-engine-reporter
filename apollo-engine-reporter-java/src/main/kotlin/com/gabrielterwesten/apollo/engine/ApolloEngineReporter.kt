@@ -197,6 +197,13 @@ class ApolloEngineReporter(
 
     private val activeProcessTraceJobs = synchronizedSet(mutableSetOf<Job>())
 
+    init {
+        require(flushBufferThreshold >= 0) { "flushBufferThreshold must be >= 0" }
+        require(!reportInterval.isZero) { "reportInterval must not be zero" }
+        require(!reportInterval.isNegative) { "reportInterval must be positive" }
+        require(threadPoolSize >= 1) { "threadPoolSize must be >= 1" }
+    }
+
     /**
      * Starts this reporter. Before this method completes the reporter can not be used.
      *
