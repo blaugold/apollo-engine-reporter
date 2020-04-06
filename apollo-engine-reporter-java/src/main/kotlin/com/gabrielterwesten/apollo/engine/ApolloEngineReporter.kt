@@ -233,7 +233,7 @@ class ApolloEngineReporter(
 
             val flushJob = coroutineScope.launch(CoroutineExceptionHandler { _, e ->
                 log.error("Error while flushing during stopping:", e)
-            }) { flush(emptyBuffer = true) }
+            }) { flush(forceIfBelowThreshold = true) }
 
             (activeProcessTraceJobs + scheduledFlushJob + flushJob).joinAll()
         }
@@ -269,14 +269,18 @@ class ApolloEngineReporter(
 
         buffer.addTrace(signature, trace)
 
-        flush(emptyBuffer = flushImmediately)
+        flush(forceIfBelowThreshold = flushImmediately)
     }
 
     /**
      * Flushes [buffer] in batches of size [flushBufferThreshold]. If buffer is below
-     * [flushBufferThreshold] no traces are flushed unless [emptyBuffer] is `true`.
+     * [flushBufferThreshold] no traces are flushed unless [forceIfBelowThreshold] is `true`.
      */
-    private suspend fun flush(emptyBuffer: Boolean = false) {
+    private suspend fun flush(forceIfBelowThreshold: Boolean = false) {
+        if (log.isDebugEnabled) {
+            log.debug("Flushing buffered traces: forceIfBelowThreshold = $forceIfBelowThreshold")
+        }
+
         val batches = generateSequence {
             val traces = buffer.flush(flushBufferThreshold)
 
@@ -284,7 +288,7 @@ class ApolloEngineReporter(
             if (traces.isEmpty()) when {
 
                 // We make sure buffer is empty
-                emptyBuffer -> buffer.flush().let { if (it.isEmpty()) null else it }
+                forceIfBelowThreshold -> buffer.flush().let { if (it.isEmpty()) null else it }
 
                 else -> null
 
@@ -326,7 +330,7 @@ class ApolloEngineReporter(
             // We are not joining to wait for flushing to complete to keep intervals even
             coroutineScope.launch(CoroutineExceptionHandler { _, e ->
                 log.error("Error while performing scheduled flush:", e)
-            }) { flush(emptyBuffer = true) }
+            }) { flush(forceIfBelowThreshold = true) }
         }
     }
 
