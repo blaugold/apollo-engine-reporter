@@ -15,10 +15,9 @@ import graphql.language.Document
  */
 interface QuerySignatureStrategy {
 
-    /**
-     * Returns the signature for the given query. If [operation] is `null` [document] contains a
-     * nameless query for which the signature should be computed.
-     */
-    fun computeSignature(document: Document, operation: String? = null): String
-
+  /**
+   * Returns the signature for the given query. If [operation] is `null` [document] contains a
+   * nameless query for which the signature should be computed.
+   */
+  fun computeSignature(document: Document, operation: String? = null): String
 }

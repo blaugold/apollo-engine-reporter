@@ -9,20 +9,17 @@ import mdg.engine.proto.GraphqlApolloReporing.Trace
  */
 interface TraceInputProcessor {
 
-    /**
-     * Returns the processed trace [input].
-     */
-    fun process(input: TraceInput): TraceInput
-
+  /** Returns the processed trace [input]. */
+  fun process(input: TraceInput): TraceInput
 }
 
 fun traceInputProcessor(process: (TraceInput) -> TraceInput): TraceInputProcessor =
-        object : TraceInputProcessor {
-            override fun process(input: TraceInput): TraceInput = process(input)
-        }
+    object : TraceInputProcessor {
+      override fun process(input: TraceInput): TraceInput = process(input)
+    }
 
 fun variablesProcessor(process: (Map<String, Any>?) -> Map<String, Any>?): TraceInputProcessor =
-        object : TraceInputProcessor {
-            override fun process(input: TraceInput): TraceInput =
-                    input.copy(variables = input.variables.let(process))
-        }
+    object : TraceInputProcessor {
+      override fun process(input: TraceInput): TraceInput =
+          input.copy(variables = input.variables.let(process))
+    }

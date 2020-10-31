@@ -11,54 +11,56 @@ import org.junit.jupiter.api.Test
 
 class E2ETest {
 
-    private val testApiKey = "service:java-apollo-engine-reporter:9AHOL8XylVxVkjL_MLKGXg"
+  private val testApiKey = "service:java-apollo-engine-reporter:9AHOL8XylVxVkjL_MLKGXg"
 
-    @Test
-    fun smoke() {
-        val schema = """
+  @Test
+  fun smoke() {
+    val schema =
+        """
             type Query {
                 hello: String
                 error: String
             }
         """.trimIndent()
 
-        val typeDefinitionRegistry = SchemaParser().parse(schema)
+    val typeDefinitionRegistry = SchemaParser().parse(schema)
 
-        val runtimeWiring = RuntimeWiring.newRuntimeWiring()
-                .type("Query") {
-                    it.dataFetcher("hello", StaticDataFetcher("World"))
-                    it.dataFetcher("error") { throw IllegalArgumentException("Whops") }
-                }
-                .build()
+    val runtimeWiring =
+        RuntimeWiring.newRuntimeWiring()
+            .type("Query") {
+              it.dataFetcher("hello", StaticDataFetcher("World"))
+              it.dataFetcher("error") { throw IllegalArgumentException("Whops") }
+            }
+            .build()
 
+    val reporter =
+        ApolloEngineReporter(
+            traceShipper = DefaultTraceShipper(apiKey = testApiKey),
+            querySignatureStrategy = DefaultQuerySignatureStrategy,
+            reportGenerator = DefaultReportGenerator(),
+            traceInputProcessors =
+                traceInputProcessors() +
+                    listOf(
+                        traceInputProcessor {
+                          it.copy(
+                              clientInfo = ClientInfo(name = "E2ETest", version = Version.string))
+                        }))
 
-        val reporter = ApolloEngineReporter(
-                traceShipper = DefaultTraceShipper(apiKey = testApiKey),
-                querySignatureStrategy = DefaultQuerySignatureStrategy,
-                reportGenerator = DefaultReportGenerator(),
-                traceInputProcessors = traceInputProcessors() + listOf(traceInputProcessor {
-                    it.copy(clientInfo = ClientInfo(name = "E2ETest", version = Version.string))
-                })
-        )
+    reporter.start()
 
-        reporter.start()
+    val instrumentation =
+        ChainedInstrumentation(
+            listOf(TracingInstrumentation(), TraceReporterInstrumentation(reporter)))
 
-        val instrumentation = ChainedInstrumentation(listOf(
-                TracingInstrumentation(),
-                TraceReporterInstrumentation(reporter)
-        ))
+    val graphQLSchema =
+        SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring)
 
-        val graphQLSchema = SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring)
+    val execution = GraphQL.newGraphQL(graphQLSchema).instrumentation(instrumentation).build()
 
-        val execution = GraphQL.newGraphQL(graphQLSchema)
-                .instrumentation(instrumentation)
-                .build()
+    val result = execution.execute("query { hello error }")
 
-        val result = execution.execute("query { hello error }")
+    println(result.getData<Any>().toString())
 
-        println(result.getData<Any>().toString())
-
-        reporter.stop()
-    }
-
+    reporter.stop()
+  }
 }

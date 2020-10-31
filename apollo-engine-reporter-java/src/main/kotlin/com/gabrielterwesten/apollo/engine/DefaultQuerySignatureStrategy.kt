@@ -11,10 +11,9 @@ private val astSignature = AstSignature()
  */
 object DefaultQuerySignatureStrategy : QuerySignatureStrategy {
 
-    override fun computeSignature(document: Document, operation: String?): String {
-        val docString = astSignature.signatureQuery(document, operation).printQuery()
-        val operationComment = "# ${operation ?: "-"}"
-        return "$operationComment\n$docString"
-    }
-
+  override fun computeSignature(document: Document, operation: String?): String {
+    val docString = astSignature.signatureQuery(document, operation).printQuery()
+    val operationComment = "# ${operation ?: "-"}"
+    return "$operationComment\n$docString"
+  }
 }

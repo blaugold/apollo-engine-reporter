@@ -6,9 +6,6 @@ package com.gabrielterwesten.apollo.engine
  */
 interface TraceReporter {
 
-    /**
-     * Accepts a new trace which should be reported.
-     */
-    fun reportTrace(traceContext: TraceContext)
-
+  /** Accepts a new trace which should be reported. */
+  fun reportTrace(traceContext: TraceContext)
 }

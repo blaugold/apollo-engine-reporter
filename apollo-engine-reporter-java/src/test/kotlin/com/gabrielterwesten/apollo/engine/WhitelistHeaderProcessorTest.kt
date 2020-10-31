@@ -5,35 +5,26 @@ import org.junit.jupiter.api.Test
 
 internal class WhitelistHeaderProcessorTest {
 
-    @Test
-    fun `process headers`() {
-        // Given
-        val processor = WhitelistHeaderProcessor(setOf("A", "C"))
-        val input = TraceInput(queryTrace(), httpTrace = HttpTrace(
-                requestHeaders = mapOf(
-                        "A" to listOf("A"),
-                        "B" to listOf("B")
-                ),
-                responseHeaders = mapOf(
-                        "C" to listOf("C"),
-                        "D" to listOf("D")
-                )
-        ))
+  @Test
+  fun `process headers`() {
+    // Given
+    val processor = WhitelistHeaderProcessor(setOf("A", "C"))
+    val input =
+        TraceInput(
+            queryTrace(),
+            httpTrace =
+                HttpTrace(
+                    requestHeaders = mapOf("A" to listOf("A"), "B" to listOf("B")),
+                    responseHeaders = mapOf("C" to listOf("C"), "D" to listOf("D"))))
 
-        // When
-        val result = processor.process(input)
+    // When
+    val result = processor.process(input)
 
-        // Then
-        assertThat(result.httpTrace).isEqualTo(HttpTrace(
-                requestHeaders = mapOf(
-                        "A" to listOf("A"),
-                        "B" to listOf("__REMOVED__")
-                ),
-                responseHeaders = mapOf(
-                        "C" to listOf("C"),
-                        "D" to listOf("__REMOVED__")
-                )
-        ))
-    }
-
+    // Then
+    assertThat(result.httpTrace)
+        .isEqualTo(
+            HttpTrace(
+                requestHeaders = mapOf("A" to listOf("A"), "B" to listOf("__REMOVED__")),
+                responseHeaders = mapOf("C" to listOf("C"), "D" to listOf("__REMOVED__"))))
+  }
 }

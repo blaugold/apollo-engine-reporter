@@ -9,9 +9,6 @@ import mdg.engine.proto.GraphqlApolloReporing.FullTracesReport
  */
 interface TraceShipper {
 
-    /**
-     * Ship [report] to an Apollo Engine server.
-     */
-    suspend fun ship(report: FullTracesReport)
-
+  /** Ship [report] to an Apollo Engine server. */
+  suspend fun ship(report: FullTracesReport)
 }

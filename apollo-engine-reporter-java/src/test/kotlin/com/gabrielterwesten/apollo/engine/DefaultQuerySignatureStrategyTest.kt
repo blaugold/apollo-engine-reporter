@@ -7,67 +7,71 @@ import org.junit.jupiter.api.Test
 
 internal class DefaultQuerySignatureStrategyTest {
 
-    @Test
-    fun `add operation header for anonymous operation`() {
-        // Given
-        val queryStr = """
+  @Test
+  fun `add operation header for anonymous operation`() {
+    // Given
+    val queryStr = """
             query {
                 a
             }
         """.trimIndent()
-        val queryDoc = Parser().parseDocument(queryStr)
+    val queryDoc = Parser().parseDocument(queryStr)
 
-        // When
-        val signature = computeSignature(queryDoc)
+    // When
+    val signature = computeSignature(queryDoc)
 
-        // Then
-        assertThat(signature).isEqualTo("""
+    // Then
+    assertThat(signature)
+        .isEqualTo("""
             # -
             query { a }
         """.trimIndent())
-    }
+  }
 
-    @Test
-    fun `add operation header for named operation`() {
-        // Given
-        val queryStr = """
+  @Test
+  fun `add operation header for named operation`() {
+    // Given
+    val queryStr =
+        """
             query A {
                 a
             }
         """.trimIndent()
-        val queryDoc = Parser().parseDocument(queryStr)
+    val queryDoc = Parser().parseDocument(queryStr)
 
-        // When
-        val signature = computeSignature(queryDoc, "A")
+    // When
+    val signature = computeSignature(queryDoc, "A")
 
-        // Then
-        assertThat(signature).isEqualTo("""
+    // Then
+    assertThat(signature)
+        .isEqualTo("""
             # A
             query A { a }
         """.trimIndent())
-    }
+  }
 
-    @Test
-    fun `use AstSignature to transform query`() {
-        // This just checks that fields are ordered which is one the things AstSignature does.
+  @Test
+  fun `use AstSignature to transform query`() {
+    // This just checks that fields are ordered which is one the things AstSignature does.
 
-        // Given
-        val queryStr = """
+    // Given
+    val queryStr =
+        """
             query {
                 b
                 a
             }
         """.trimIndent()
-        val queryDoc = Parser().parseDocument(queryStr)
+    val queryDoc = Parser().parseDocument(queryStr)
 
-        // When
-        val signature = computeSignature(queryDoc)
+    // When
+    val signature = computeSignature(queryDoc)
 
-        // Then
-        assertThat(signature).isEqualTo("""
+    // Then
+    assertThat(signature)
+        .isEqualTo("""
             # -
             query { a b }
         """.trimIndent())
-    }
-
+  }
 }

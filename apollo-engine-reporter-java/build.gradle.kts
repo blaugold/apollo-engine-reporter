@@ -1,6 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
-import java.util.*
+import java.util.Properties
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     `java-library`
