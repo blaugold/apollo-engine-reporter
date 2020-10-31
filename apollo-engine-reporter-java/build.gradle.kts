@@ -17,7 +17,6 @@ dependencies {
     implementation("org.slf4j:slf4j-api:1.7.28")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
     implementation(kotlin("reflect"))
-    implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("javax.servlet:javax.servlet-api:3.1.0")
