@@ -167,7 +167,7 @@ class ApolloEngineReporter(
 
   private lateinit var scheduledFlushJob: Job
 
-  private val activeProcessTraceJobs = synchronizedSet(mutableSetOf<Job>())
+  private val activeFlushTraceAfterReportingJobs = synchronizedSet(mutableSetOf<Job>())
 
   init {
     require(flushBufferThreshold >= 0) { "flushBufferThreshold must be >= 0" }
@@ -209,7 +209,7 @@ class ApolloEngineReporter(
                 log.error("Error while flushing during stopping:", e)
               }) { flush(forceIfBelowThreshold = true) }
 
-      (activeProcessTraceJobs + scheduledFlushJob + flushJob).joinAll()
+      (activeFlushTraceAfterReportingJobs + scheduledFlushJob + flushJob).joinAll()
     }
 
     coroutineDispatcher.close()
@@ -219,17 +219,27 @@ class ApolloEngineReporter(
     check(started.get()) { "Reporter has not been started yet." }
     check(!stopped.get()) { "Reporter has already been stopped." }
 
+    if (log.isDebugEnabled) {
+      log.debug("Reported trace ${traceContext.toDebugString()}")
+    }
+
+    createTraceAndAddToBuffer(traceContext)
+
     val job =
         coroutineScope.launch(
-            CoroutineExceptionHandler { _, e -> log.error("Error while processing trace:", e) }) {
-          processTrace(traceContext)
+            CoroutineExceptionHandler { _, e -> log.error("Error while flushing trace:", e) }) {
+          flush(forceIfBelowThreshold = flushImmediately)
         }
 
-    activeProcessTraceJobs.add(job)
-    job.invokeOnCompletion { activeProcessTraceJobs.remove(job) }
+    activeFlushTraceAfterReportingJobs.add(job)
+    job.invokeOnCompletion { activeFlushTraceAfterReportingJobs.remove(job) }
   }
 
-  private suspend fun processTrace(traceContext: TraceContext) {
+  private fun createTraceAndAddToBuffer(traceContext: TraceContext) {
+    if (log.isDebugEnabled) {
+      log.debug("Processing trace: ${traceContext.toDebugString()}")
+    }
+
     val queryDoc = parser.parseDocument(traceContext.query)
     val signature = querySignatureStrategy.computeSignature(queryDoc, traceContext.operation)
 
@@ -245,8 +255,9 @@ class ApolloEngineReporter(
     val trace = reportGenerator.getTrace(input)
 
     buffer.addTrace(signature, trace)
-
-    flush(forceIfBelowThreshold = flushImmediately)
+    if (log.isDebugEnabled) {
+      log.debug("Added trace to buffer: ${traceContext.toDebugString()}")
+    }
   }
 
   /**
@@ -267,7 +278,7 @@ class ApolloEngineReporter(
               when {
 
                 // We make sure buffer is empty
-                forceIfBelowThreshold -> buffer.flush().let { if (it.isEmpty()) null else it }
+                forceIfBelowThreshold -> buffer.flush().takeIf { it.isNotEmpty() }
                 else -> null
               }
           else traces
@@ -315,3 +326,5 @@ class ApolloEngineReporter(
         }
       }
 }
+
+private fun TraceContext.toDebugString(): String = "TraceContext(${hashCode()})"

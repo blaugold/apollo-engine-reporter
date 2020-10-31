@@ -47,8 +47,10 @@ class TraceBuffer(
    *
    * If no [minBytes] to flush are given the complete buffer is emptied.
    */
-  fun flush(minBytes: Long = maxBufferedBytes): Map<String, List<Trace>> =
+  fun flush(minBytes: Long = bufferedBytes): Map<String, List<Trace>> =
       synchronized(this) {
+        if (bufferedBytes < minBytes) return emptyMap()
+
         var unbufferedBytes = 0L
         val result = mutableMapOf<String, MutableList<Trace>>()
 
