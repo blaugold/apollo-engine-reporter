@@ -28,7 +28,7 @@ allprojects {
     apply(plugin = "com.diffplug.spotless")
 
     group = "com.gabrielterwesten"
-    version = "1.1.0"
+    version = "1.2.0"
 
     repositories {
         jcenter()
