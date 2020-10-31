@@ -2,10 +2,12 @@ package com.gabrielterwesten.apollo.engine
 
 import java.io.IOException
 import java.time.Duration
+import kotlin.coroutines.resumeWithException
 import kotlin.math.pow
 import kotlin.random.Random.Default.nextLong
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import mdg.engine.proto.GraphqlApolloReporing.FullTracesReport
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,7 +28,7 @@ class DefaultTraceShipper(
     private val endpointUrl: String = "https://engine-report.apollodata.com/api/ingress/traces",
 
     /** The max number of retries to perform. Default is 5. */
-    private val maxRetries: Long = 5,
+    private val maxRetries: Int = 5,
 
     /** The backoff time used in exponential backoff algorithm. Default is 200ms. */
     private val backoffTime: Duration = Duration.ofMillis(200)
@@ -40,6 +42,7 @@ class DefaultTraceShipper(
 
   private val protoBufContentType = "application/protobuf".toMediaType()
 
+  @Suppress("BlockingMethodInNonBlockingContext")
   override suspend fun ship(report: FullTracesReport) {
     val body = report.toByteArray().toRequestBody(protoBufContentType)
 
@@ -47,65 +50,94 @@ class DefaultTraceShipper(
 
     val response =
         requestWithRetry(request) {
-          val isServerError = it.code >= 500
+          when (it) {
+            is CallResult.Response -> {
+              val response = it.response
+              val isServerError = response.code >= 500
 
-          if (isServerError) {
-            log.info("Server was unable to process report: ${it.code}: ${it.body?.string()}")
+              if (isServerError) {
+                log.info(
+                    "Server was unable to process report: ${response.code}: ${response.body?.string()}")
+              }
+
+              isServerError
+            }
+            is CallResult.Error ->
+                // Could not find any useful exceptions to handle since okhttp implements retries
+                // for exceptions at the network level.
+                // https://square.github.io/okhttp/calls/#retrying-requests
+                false
           }
-
-          isServerError
         }
 
-    response.use {
-      when (it) {
-        null -> log.warn("Gave up sending report to server after $maxRetries retries.")
-        else -> {
-          if (it.isSuccessful) log.debug("Successful shipped traces to Apollo Engine Server.")
-          else
-              log.error(
-                  "Failed to ship traces to Apollo Engine server: ${it.code}: " +
-                      "${it.body?.string()}")
+    response
+        .also {
+          when (it) {
+            null -> log.warn("Gave up sending report to server after $maxRetries retries.")
+            else -> {
+              if (it.isSuccessful) log.debug("Successful shipped traces to Apollo Engine Server.")
+              else
+                  log.error(
+                      "Failed to ship traces to Apollo Engine server: ${it.code}: ${it.body?.string()}")
+            }
+          }
         }
-      }
-    }
+        ?.body
+        ?.close()
   }
 
   private suspend fun requestWithRetry(
-      request: Request, shouldRetry: (Response) -> Boolean
+      request: Request, shouldRetry: (CallResult) -> Boolean
   ): Response? {
-    var tries = 0L
+    var tries = 0
     val backoffTimeMs = backoffTime.toMillis()
 
     while (tries < maxRetries) {
       tries++
 
-      val response = client.newCall(request).toDeferred().await()
-      if (shouldRetry(response)) {
-        response.close()
+      var retry: Boolean
+      var response: Response? = null
+
+      try {
+        response = client.newCall(request).await()
+        retry = shouldRetry(CallResult.Response(response))
+      } catch (e: IOException) {
+        retry = shouldRetry(CallResult.Error(e))
+      }
+
+      if (retry) {
+        response?.body?.close()
         delay(exponentialBackoffMs(tries, backoffTimeMs))
       } else return response
     }
 
     return null
   }
+
+  sealed class CallResult {
+    data class Error(val exception: IOException) : CallResult()
+    data class Response(val response: okhttp3.Response) : CallResult()
+  }
 }
 
-private fun exponentialBackoffMs(tries: Long, slotMs: Long) =
+private fun exponentialBackoffMs(tries: Int, slotMs: Long) =
     nextLong(0, 2.0.pow(tries.toDouble()).toLong() - 1) * slotMs
 
-private fun Call.toDeferred(): CompletableDeferred<Response> {
-  val future = CompletableDeferred<Response>()
+@OptIn(ExperimentalCoroutinesApi::class)
+private suspend fun Call.await(): Response =
+    suspendCancellableCoroutine { cont ->
+      if (cont.isCancelled) return@suspendCancellableCoroutine
 
-  enqueue(
-      object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-          future.completeExceptionally(e)
-        }
+      enqueue(
+          object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+              cont.resumeWithException(e)
+            }
 
-        override fun onResponse(call: Call, response: Response) {
-          future.complete(response)
-        }
-      })
+            override fun onResponse(call: Call, response: Response) {
+              cont.resume(response) { response.body?.close() }
+            }
+          })
 
-  return future
-}
+      cont.invokeOnCancellation { if (!(isCanceled() || isExecuted())) cancel() }
+    }
