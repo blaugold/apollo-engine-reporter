@@ -1,11 +1,9 @@
-name: CI
+name: Publish
 
 on:
-  push:
-    branches:
-      - "*"
-    tags-ignore:
-      - "*"
+  release:
+    types:
+      - created
 
 jobs:
   build:
@@ -23,9 +21,7 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      - run: ./gradlew build --no-daemon
-      - uses: actions/upload-artifact@v1
-        if: failure()
-        with:
-          name: reports
-          path: apollo-engine-reporter/build/reports
+      - run: ./gradlew --no-daemon bintrayUpload
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
