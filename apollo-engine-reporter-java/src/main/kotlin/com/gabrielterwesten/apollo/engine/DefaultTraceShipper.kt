@@ -45,45 +45,40 @@ class DefaultTraceShipper(
   @Suppress("BlockingMethodInNonBlockingContext")
   override suspend fun ship(report: FullTracesReport) {
     val body = report.toByteArray().toRequestBody(protoBufContentType)
-
     val request = Request.Builder().url(endpointUrl).post(body).header(apiKeyHeader, apiKey).build()
+    val response = requestWithRetry(request, this::shouldRetry)
+    if (response == null) log.warn("Gave up sending report to server after $maxRetries retries.")
+    else handleResponse(response)
+  }
 
-    val response =
-        requestWithRetry(request) {
-          when (it) {
-            is CallResult.Response -> {
-              val response = it.response
-              val isServerError = response.code >= 500
+  private fun shouldRetry(it: CallResult): Boolean =
+      when (it) {
+        is CallResult.Response -> {
+          val response = it.response
+          val isServerError = response.code >= 500
 
-              if (isServerError) {
-                log.info(
-                    "Server was unable to process report: ${response.code}: ${response.body?.string()}")
-              }
-
-              isServerError
-            }
-            is CallResult.Error ->
-                // Could not find any useful exceptions to handle since okhttp implements retries
-                // for exceptions at the network level.
-                // https://square.github.io/okhttp/calls/#retrying-requests
-                false
+          if (isServerError) {
+            log.info(
+                "Server was unable to process report: ${response.code}: ${response.body?.string()}")
           }
-        }
 
-    response
-        .also {
-          when (it) {
-            null -> log.warn("Gave up sending report to server after $maxRetries retries.")
-            else -> {
-              if (it.isSuccessful) log.debug("Successful shipped traces to Apollo Engine Server.")
-              else
-                  log.error(
-                      "Failed to ship traces to Apollo Engine server: ${it.code}: ${it.body?.string()}")
-            }
-          }
+          isServerError
         }
-        ?.body
-        ?.close()
+        is CallResult.Error ->
+            // Could not find any useful exceptions to handle since okhttp implements retries
+            // for exceptions at the network level.
+            // https://square.github.io/okhttp/calls/#retrying-requests
+            false
+      }
+
+  private fun handleResponse(response: Response) {
+    if (response.isSuccessful) {
+      val code = response.code
+      val body = response.body?.string()
+      log.error("Failed to ship traces to Apollo Engine server: [$code]:\n$body")
+    }
+
+    response.body?.close()
   }
 
   private suspend fun requestWithRetry(

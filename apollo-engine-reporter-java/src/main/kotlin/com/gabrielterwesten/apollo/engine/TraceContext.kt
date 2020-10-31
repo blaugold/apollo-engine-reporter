@@ -27,4 +27,5 @@ data class TraceContext(
     val http: HttpTrace? = null,
 
     /** Application specific context object. */
-    val context: Any? = null)
+    val context: Any? = null,
+)
