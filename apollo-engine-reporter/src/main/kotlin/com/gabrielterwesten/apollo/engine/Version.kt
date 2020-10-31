@@ -1,10 +1,10 @@
 package com.gabrielterwesten.apollo.engine
 
-/** Version of the apollo-engine-reporter-java library. */
+/** Version of the apollo-engine-reporter library. */
 object Version {
 
   val string by lazy {
-    javaClass.classLoader.getResource("apollo-engine-reporter-java.version")!!.readText()
+    javaClass.classLoader.getResource("apollo-engine-reporter.version")!!.readText()
   }
 
   private val components: List<Int> by lazy {

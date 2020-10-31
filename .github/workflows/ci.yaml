@@ -21,4 +21,4 @@ jobs:
         if: failure()
         with:
           name: reports
-          path: apollo-engine-reporter-java/build/reports
+          path: apollo-engine-reporter/build/reports

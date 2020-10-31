@@ -7,6 +7,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = "apollo-engine-reporter-java"
+rootProject.name = "apollo-engine-reporter"
 
-include("apollo-engine-reporter-java")
+include("apollo-engine-reporter")

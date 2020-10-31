@@ -73,7 +73,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = URI("https://maven.pkg.github.com/blaugold/apollo-engine-reporter-java")
+            url = URI("https://maven.pkg.github.com/blaugold/apollo-engine-reporter")
             credentials {
                 username = project.findProperty("github.username") as String?
                 password = project.findProperty("github.password") as String?

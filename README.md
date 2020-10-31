@@ -1,21 +1,7 @@
-# Java Apollo Engine Reporter
+# Apollo Engine Reporter
 
-This is a reporter which sends GraphQL query traces to an Apollo Engine server, for the GraphQL Java
-implementation.
-
-### Installation
-
-TODO
-
-### Usage
-
-TODO
+This is a reporter which sends GraphQL query traces to an Apollo Engine server, written in kotlin for the JVM.
 
 ### License
 
-apollo-engine-reporter-java is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
-
-### TODO
-
-- CacheControl
-- Java API
+apollo-engine-reporter is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
