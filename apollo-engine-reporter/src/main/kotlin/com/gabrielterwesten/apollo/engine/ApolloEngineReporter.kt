@@ -232,7 +232,7 @@ class ApolloEngineReporter(
           flushJobs.toList().joinAll()
 
           if (log.isInfoEnabled) {
-            log.info("Sopped gracefully")
+            log.info("Stopped gracefully")
           }
         }
       } catch (e: TimeoutCancellationException) {
