@@ -72,7 +72,7 @@ class DefaultTraceShipper(
       }
 
   private fun handleResponse(response: Response) {
-    if (response.isSuccessful) {
+    if (!response.isSuccessful) {
       val code = response.code
       val body = response.body?.string()
       log.error("Failed to ship traces to Apollo Engine server: [$code]:\n$body")
